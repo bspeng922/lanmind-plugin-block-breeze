@@ -1,0 +1,25 @@
+{
+  "name": "lanmind-plugin-block-breeze",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Block Breeze · 方块小憩 — an offline block puzzle for LanMind.",
+  "license": "MIT",
+  "repository": "https://github.com/bspeng922/lanmind-plugin-block-breeze.git",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "playwright test",
+    "keygen": "node scripts/package.mjs keygen",
+    "package": "node scripts/package.mjs pack",
+    "verify": "node scripts/package.mjs verify"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "fflate": "0.8.3"
+  }
+}

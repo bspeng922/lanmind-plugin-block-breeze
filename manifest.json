@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "runtime": "web",
+  "id": "bspeng922.block-breeze",
+  "version": "1.0.0",
+  "name": { "zh-CN": "方块小憩", "en-US": "Block Breeze" },
+  "description": {
+    "zh-CN": "给自己一小段放松时间。拖放方块、消除行列，享受没有倒计时的离线益智游戏。支持连击、撤销和自动续局。",
+    "en-US": "A little room to unwind. Place blocks and clear lines in a relaxed offline puzzle with combos, undo, and automatic saves."
+  },
+  "defaultLocale": "zh-CN",
+  "minHostVersion": "0.2.1",
+  "sdkVersion": 1,
+  "entry": "index.html",
+  "capabilities": []
+}
