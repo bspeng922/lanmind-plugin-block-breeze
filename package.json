@@ -16,6 +16,7 @@
     "test:browser": "playwright test",
     "keygen": "node scripts/package.mjs keygen",
     "package": "node scripts/package.mjs pack",
+    "package:unsigned": "node scripts/package.mjs unsigned",
     "verify": "node scripts/package.mjs verify"
   },
   "devDependencies": {

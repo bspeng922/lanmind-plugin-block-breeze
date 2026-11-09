@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { unzipSync, zipSync } from 'fflate';
 import { build } from '../scripts/build.mjs';
-import { generateKey, packagePlugin, verifyPackage } from '../scripts/package.mjs';
+import { generateKey, packagePlugin, packageUnsigned, verifyPackage } from '../scripts/package.mjs';
 
 test('signed releases are deterministic, self-contained, and verify as both ZIP and LMPK', t => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'block-breeze-package-'));
@@ -27,4 +27,16 @@ test('signed releases are deterministic, self-contained, and verify as both ZIP 
   const tampered = path.join(temp, 'tampered.zip');
   fs.writeFileSync(tampered, zipSync(files));
   assert.throws(() => verifyPackage(tampered), /Invalid resource/);
+});
+
+test('unsigned static ZIP is usable without a key and never claims a valid signature', t => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'block-breeze-unsigned-'));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const output = path.join(temp, 'unsigned.zip');
+  const metadata = packageUnsigned({ input: build(), output });
+  assert.equal(metadata.signed, false);
+  assert.equal(metadata.publisherId, 'unsigned');
+  const files = unzipSync(fs.readFileSync(output));
+  assert.ok(!Object.hasOwn(files, 'signature.json'));
+  assert.ok(Object.hasOwn(JSON.parse(Buffer.from(files['manifest.json']).toString()).files, 'src/app.js'));
 });

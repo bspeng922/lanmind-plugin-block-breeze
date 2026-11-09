@@ -53,17 +53,33 @@ export function verifyPackage(input) {
   if (bytes.length > 100 * 1024 * 1024) throw new Error('Package exceeds 100 MiB');
   const files = unzipSync(bytes);
   const manifestBytes = files['manifest.json'];
-  const signature = JSON.parse(Buffer.from(files['signature.json']).toString('utf8'));
-  const publicBytes = Buffer.from(signature.publicKey, 'base64');
-  const publicKey = createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: publicBytes.toString('base64url') }, format: 'jwk' });
-  if (!verify(null, Buffer.concat([context, manifestBytes]), publicKey, Buffer.from(signature.signature, 'base64'))) throw new Error('Invalid package signature');
+  const signed = Object.hasOwn(files, 'signature.json');
+  let publisherId = 'unsigned';
+  if (signed) {
+    const signature = JSON.parse(Buffer.from(files['signature.json']).toString('utf8'));
+    const publicBytes = Buffer.from(signature.publicKey, 'base64');
+    const publicKey = createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: publicBytes.toString('base64url') }, format: 'jwk' });
+    if (!verify(null, Buffer.concat([context, manifestBytes]), publicKey, Buffer.from(signature.signature, 'base64'))) throw new Error('Invalid package signature');
+    publisherId = hash(publicBytes);
+  }
   const manifest = JSON.parse(Buffer.from(manifestBytes).toString('utf8'));
   if (manifest.schemaVersion !== 2 || manifest.runtime !== 'web' || manifest.sdkVersion !== 1) throw new Error('Incompatible manifest');
   for (const [name, digest] of Object.entries(manifest.files)) {
     if (!files[name] || hash(files[name]) !== digest) throw new Error(`Invalid resource: ${name}`);
   }
-  if (Object.keys(files).length !== Object.keys(manifest.files).length + 2) throw new Error('Unexpected files in package');
-  return { publisherId: hash(publicBytes), id: manifest.id, version: manifest.version, sha256: hash(bytes), sizeBytes: bytes.length };
+  if (Object.keys(files).length !== Object.keys(manifest.files).length + (signed ? 2 : 1)) throw new Error('Unexpected files in package');
+  return { publisherId, signed, id: manifest.id, version: manifest.version, sha256: hash(bytes), sizeBytes: bytes.length };
+}
+
+export function packageUnsigned({ input, output }) {
+  const manifest = JSON.parse(fs.readFileSync(path.join(input, 'manifest.json'), 'utf8'));
+  const files = Object.create(null);
+  manifest.files = {};
+  for (const asset of assets) { files[asset] = fs.readFileSync(path.join(input, asset)); manifest.files[asset] = hash(files[asset]); }
+  files['manifest.json'] = Buffer.from(JSON.stringify(manifest));
+  const archive = zipSync(files, { level: 6, mtime: new Date(1980, 0, 1), os: 3, attrs: (0o100644 << 16) >>> 0 });
+  fs.writeFileSync(output, archive, { flag: 'wx' });
+  return verifyPackage(output);
 }
 
 function cli() {
@@ -75,6 +91,19 @@ function cli() {
   }
   if (command === 'keygen' && options.out) return generateKey(options.out);
   if (command === 'verify' && options.input) return verifyPackage(options.input);
+  if (command === 'unsigned') {
+    const input = build();
+    const version = JSON.parse(fs.readFileSync(path.join(input, 'manifest.json'), 'utf8')).version;
+    const output = path.resolve(options.out ?? path.join(root, 'release'));
+    fs.mkdirSync(output, { recursive: true });
+    if (fs.existsSync(path.join(output, 'SHA256SUMS.txt'))) throw new Error('Release exists; use a fresh --out directory');
+    const filename = `block-breeze-${version}-unsigned.zip`;
+    const metadata = packageUnsigned({ input, output: path.join(output, filename) });
+    fs.writeFileSync(path.join(output, 'SHA256SUMS.txt'), `${metadata.sha256}  ${filename}\n`);
+    const repository = process.env.GITHUB_REPOSITORY ?? 'bspeng922/lanmind-plugin-block-breeze';
+    fs.writeFileSync(path.join(output, 'plugin-release.json'), `${JSON.stringify({ schemaVersion: 1, ...metadata, minHostVersion: '0.2.1', zipUrl: `https://github.com/${repository}/releases/download/v${version}/${filename}` }, null, 2)}\n`);
+    return { ...metadata, output };
+  }
   if (command === 'pack' && options.key) {
     const input = build();
     const version = JSON.parse(fs.readFileSync(path.join(input, 'manifest.json'), 'utf8')).version;
