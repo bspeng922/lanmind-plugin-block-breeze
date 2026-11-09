@@ -122,7 +122,7 @@ function cli() {
     fs.writeFileSync(path.join(output, 'plugin-release.json'), `${JSON.stringify({ schemaVersion: 1, ...metadata, minHostVersion: '0.2.1', downloadUrl: `${downloadBase}/${filename}.lmpk`, zipUrl: `${downloadBase}/${filename}.zip` }, null, 2)}\n`);
     return { ...metadata, output };
   }
-  throw new Error('Usage:\n npm run keygen -- --out <path-outside-repository>\n npm run package -- --key <publisher.pem> [--out <release-directory>]\n npm run verify -- --input <package.lmpk-or.zip>');
+  throw new Error('Usage:\n npm run package:unsigned [-- --out <release-directory>]\n npm run keygen -- --out <path-outside-repository>\n npm run package -- --key <publisher.pem> [--out <release-directory>]\n npm run verify -- --input <package.lmpk-or.zip>');
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

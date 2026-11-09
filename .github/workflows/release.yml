@@ -1,4 +1,4 @@
-name: Publish signed plugin
+name: Publish plugin
 on:
   push:
     tags: ['v*']
